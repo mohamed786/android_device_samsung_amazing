@@ -1,0 +1,79 @@
+import init.gt-s6802board.bt.rc
+import init.gt-s6802board.fs.rc
+import init.gt-s6802board.gps.rc
+import init.gt-s6802board.sensors.rc
+import init.gt-s6802board.swapart.rc
+import init.gt-s6802board.usb.rc
+import init.gt-s6802board.wifi.rc
+
+on early-init
+
+    # remove /etc/recovery.fstab to fix /system/etc compatibility symlink
+    rm /etc/recovery.fstab
+    rmdir /etc
+
+    # systrace
+    mount debugfs /sys/kernel/debug /sys/kernel/debug
+
+on init
+
+    # sdcard
+    mkdir /mnt/media_rw/sdcard0 0700 media_rw media_rw
+    mkdir /mnt/media_rw/sdcard1 0700 media_rw media_rw
+    mkdir /storage/sdcard0 0700 root root
+    mkdir /storage/sdcard1 0700 root root
+
+    symlink /storage/sdcard1 /mnt/sdcard
+    symlink /storage/sdcard1 /sdcard
+    symlink /storage/sdcard0 /mnt/sdcard/external_sd
+    symlink /storage/sdcard0 /external_sd
+    export EXTERNAL_STORAGE /storage/sdcard1
+    export SECONDARY_STORAGE /storage/sdcard0
+
+    # sd-ext
+    mkdir /sd-ext 0771 system system
+    export SD_EXT_DIRECTORY /sd-ext
+
+    # zRAM - see https://source.android.com/devices/low-ram.html
+    write /proc/sys/vm/page-cluster 0
+
+on fs
+
+    # mount device partitions
+    mount_all /fstab.gt-s6802board
+    swapon_all /fstab.gt-s6802board
+
+on post-fs-data
+
+    chown system system /sys/module/bcm215xx_pm/parameters/debug
+
+    # Force Power Down
+    chmod 0660 /sys/class/sec/pm/power_down
+    chown root system /sys/class/sec/pm/power_down
+
+    # CPU Governor
+    chmod 0660 /sys/class/sec/cpu/cpu_gov
+    chown root system /sys/class/sec/cpu/cpu_gov
+    
+    # waketime CSP461560
+    chown radio system /sys/module/bcm_fuse_net/parameters/pdp_waketime
+
+    # audio debug (needed for ALSA driver routing)
+    chown system audio /sys/devices/platform/brcm_alsa_device/sound/card0/controlC0/BrcmAud_DrvTest
+
+service fuse_sdcard0 /system/bin/sdcard -u 1023 -g 1023 -d /mnt/media_rw/sdcard0 /storage/sdcard0
+    class late_start
+    disabled
+
+service fuse_sdcard1 /system/bin/sdcard -u 1023 -g 1023 -d /mnt/media_rw/sdcard1 /storage/sdcard1
+    class late_start
+    disabled 
+
+service charger /charger
+    class charger
+
+on property:sys.boot_completed=1
+    # Override Kernel Samepage Merging (KSM) values
+    write /sys/kernel/mm/ksm/sleep_millisecs 4000
+    write /sys/kernel/mm/ksm/pages_to_scan 256
+
