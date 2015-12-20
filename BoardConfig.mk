@@ -31,7 +31,7 @@ BOARD_BLUETOOTH_BDROID_BUILDCFG_INCLUDE_DIR	:= device/samsung/amazing/bluetooth
 # Board
 TARGET_BOARD_PLATFORM				      := bcm21553
 TARGET_BOOTLOADER_BOARD_NAME			:= amazing
-TARGET_CPU_VARIANT				        := generic
+
 
 #Asserts
 TARGET_OTA_ASSERT_DEVICE  			:=amazing,GT-S6802
